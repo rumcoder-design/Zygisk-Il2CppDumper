@@ -1,27 +1,46 @@
-name: Build
+name: Build Zygisk Dumper
 on:
   workflow_dispatch:
-      inputs:
-        package_name:
-          description: "com.dts.freefiremax"
-          required: true
+    inputs:
+      package_name:
+        description: "Package Name (Ex: com.dts.freefiremax)"
+        required: true
+        default: "com.dts.freefiremax"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-java@v3
+    # Atualizado para v4 para evitar erro de Node.js 16
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Atualizado para v4
+    - uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: 11
+        java-version: 17 # Atualizado para 17 (padrão atual do Android Gradle Plugin)
         cache: gradle
-    - run: |
+
+    - name: Configure and Build
+      run: |
+        # Dá permissão de execução ao gradlew
         chmod +x ./gradlew
+        
+        # 1. Muda a descrição do módulo no Magisk para mostrar o nome do jogo
         sed -i 's/moduleDescription = "/moduleDescription = "(${{ github.event.inputs.package_name }}) /g' module.gradle
+        
+        # 2. Injeta o nome do pacote (com.dts.freefiremax) dentro do código C++ (game.h)
+        # IMPORTANTE: Isso substitui o texto "com.game.packagename" pelo input.
         sed -i "s/com.game.packagename/${{ github.event.inputs.package_name }}/g" module/src/main/cpp/game.h
+        
+        # Compila a versão Release
         ./gradlew :module:assembleRelease
+
+    # A parte que corrige o seu erro original
     - uses: actions/upload-artifact@v4
       with:
-        name: zygisk-il2cppdumper
-        path: out/magisk_module_release/
+        name: Zygisk-Il2CppDumper-${{ github.event.inputs.package_name }}
+        path: out/magisk_module_release/*
+        if-no-files-found: error
