@@ -1,4 +1,4 @@
-name: Build Zygisk Dumper
+name: Build
 on:
   workflow_dispatch:
     inputs:
@@ -11,36 +11,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    # Atualizado para v4 para evitar erro de Node.js 16
+    # ATUALIZADO: v3 -> v4
     - uses: actions/checkout@v4
       with:
         submodules: recursive
 
-    # Atualizado para v4
+    # ATUALIZADO: v3 -> v4 (E Java 17 que é o padrão atual)
     - uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: 17 # Atualizado para 17 (padrão atual do Android Gradle Plugin)
+        java-version: 17
         cache: gradle
 
-    - name: Configure and Build
-      run: |
-        # Dá permissão de execução ao gradlew
+    - run: |
         chmod +x ./gradlew
-        
-        # 1. Muda a descrição do módulo no Magisk para mostrar o nome do jogo
+        # Substitui a descrição no gradle
         sed -i 's/moduleDescription = "/moduleDescription = "(${{ github.event.inputs.package_name }}) /g' module.gradle
-        
-        # 2. Injeta o nome do pacote (com.dts.freefiremax) dentro do código C++ (game.h)
-        # IMPORTANTE: Isso substitui o texto "com.game.packagename" pelo input.
+        # Substitui o nome do pacote no arquivo C++ (game.h)
         sed -i "s/com.game.packagename/${{ github.event.inputs.package_name }}/g" module/src/main/cpp/game.h
-        
-        # Compila a versão Release
+        # Compila
         ./gradlew :module:assembleRelease
 
-    # A parte que corrige o seu erro original
+    # ATUALIZADO: v3 -> v4 (Correção do seu erro)
     - uses: actions/upload-artifact@v4
       with:
-        name: Zygisk-Il2CppDumper-${{ github.event.inputs.package_name }}
+        name: zygisk-il2cppdumper-${{ github.event.inputs.package_name }}
         path: out/magisk_module_release/*
         if-no-files-found: error
